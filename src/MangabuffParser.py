@@ -1,3 +1,4 @@
+import logging
 from time import sleep
 from enum import Enum
 from urllib.parse import urlencode
@@ -58,47 +59,52 @@ class NotAuthorized(Exception):
     pass
 
 
+logger = logging.getLogger(__name__)
+
 class MangabuffParser:
     def __init__(self, *, mail, password, request_delay=2.0):
-        if not isinstance(mail, str) or not isinstance(password, str):
-            raise TypeError("mail и password должны быть строками")
-
-        if not mail.strip() or not password.strip():
-            raise ValueError("mail и password пустые строки")
+        logger.info(f"MangabuffParser init called with mail: {mail}, request_delay: {request_delay}")
 
         try:
-            validate_email(mail)
-        except EmailNotValidError:
-            raise ValueError("mail не валидный")
+            if not isinstance(mail, str) or not isinstance(password, str):
+                raise TypeError("mail и password должны быть строками")
+            if not mail.strip() or not password.strip():
+                raise ValueError("mail и password пустые строки")
 
-        self._mail = mail
-        self._password = password
+            try:
+                validate_email(mail)
+            except EmailNotValidError:
+                raise ValueError("mail не валидный")
 
-        if not isinstance(request_delay, float|int):
-            raise TypeError("request_delay должен быть числом")
-        if request_delay < 0:
-            raise ValueError("request_delay должен быть положительным числом")
+            if not isinstance(request_delay, float|int):
+                raise TypeError("request_delay должен быть числом")
+            if request_delay < 0:
+                raise ValueError("request_delay должен быть положительным числом")
 
-        self._request_delay = request_delay
-        self._session = requests.Session()
+            self._request_delay = request_delay
+            self._session = requests.Session()
 
-        headers = {
-            "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
-        }
-        self._session.headers.update(headers)
+            headers = {
+                "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
+            }
+            self._session.headers.update(headers)
 
-        self._login()
+            self._login(mail, password)
+        except Exception as e:
+            logger.critical(e)
+            raise e
 
     def __enter__(self):
         return self
 
     def _close(self):
+        logger.info(f"MangabuffParser session closed")
         try:
             if hasattr(self, "_session"):
                 self._session.close()
         except Exception as close_error:
-            raise close_error # Добавить логгер
+            logger.error(close_error)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._close()
@@ -107,7 +113,8 @@ class MangabuffParser:
     def __del__(self):
         self._close()
 
-    def _login(self):
+    def _login(self, mail, password):
+        logger.info(f"{mail} - try login")
         url = f"{MANGABUFF_URL}/login/"
 
         login_page = self._session.get(url, timeout=10)
@@ -125,18 +132,22 @@ class MangabuffParser:
         }
 
         login_data = {
-            "email": self._mail,
-            "password": self._password,
+            "email": mail,
+            "password": password,
         }
 
         response = self._session.post(MANGABUFF_URL + "/login/", headers=headers, data=login_data)
         if response.status_code == AUTHORIZATION_ERROR_CODE:
             raise NotAuthorized("Логин или пароль неверны")
         response.raise_for_status()
+        logger.info(f"{mail} - login success")
+        logger.info("Session opened")
 
     def _parse_cards_lots(self, *, cards_list):
+        logger.info("Parsing cards lots")
         for card in cards_list:
             url = f"{MANGABUFF_URL}/market/card/{card.data_id}"
+            logger.debug(f"url: {url}")
 
             sleep(self._request_delay) # block safety
             response = self._session.get(url, timeout=10)
@@ -159,11 +170,13 @@ class MangabuffParser:
         return cards_list
 
     def _parse_market(self, *, url, rank):
-        result: list[CardInfo] = list()
+        logger.info("Parsing market page")
+        result = list()
 
         for current_rank in rank:
             for page in range(1, MARKET_MAX_PAGES + 1):
                 url_req = url + f"&rank={current_rank}&page={page}"
+                logger.debug(f"Parsing {url_req}")
 
                 sleep(self._request_delay)  # block safety
                 response = self._session.get(url_req, timeout=10)
@@ -188,38 +201,45 @@ class MangabuffParser:
         return result
 
     def get_cards_lots(self, *, query=None, want=False, rank=None):
-        if query:
-            if not isinstance(query, str):
-                raise TypeError("Запрос должен быть строкой")
+        logger.info(f"get_cards_lots called with query: {query}, want: {want}, rank: {rank}")
 
-            query = query.strip()
+        try:
+            if query:
+                if not isinstance(query, str):
+                    raise TypeError("Запрос должен быть строкой")
 
-        if not isinstance(want, bool):
-            raise TypeError("Флаг want должен быть только True или False")
+                query = query.strip()
 
-        if not query and not want:
-            raise ValueError("Нет возможности парсить основную страниуц торговой площадки")
+            if not isinstance(want, bool):
+                raise TypeError("Флаг want должен быть только True или False")
 
-        if not isinstance(rank, CardRank|None):
-            raise TypeError("rank должен быть CardRank типом")
+            if not query and not want:
+                raise ValueError("Нет возможности парсить основную страниуц торговой площадки")
 
-        rank = list(CardRank) if not rank else [rank,]
+            if not isinstance(rank, CardRank|None):
+                raise TypeError("rank должен быть CardRank типом")
 
-        params = {
-            "q": query,
-            "want": int(want)
-        }
+            rank = list(CardRank) if not rank else [rank,]
 
-        # url = https://mangabuff.ru/market?q=...&want=1
-        url = f"{MANGABUFF_URL}/market?{urlencode({k: v for k, v in params.items() if v})}"
+            params = {
+                "q": query,
+                "want": int(want)
+            }
 
-        result = self._parse_market(url=url, rank=rank)
+            # url = https://mangabuff.ru/market?q=...&want=1
+            url = f"{MANGABUFF_URL}/market?{urlencode({k: v for k, v in params.items() if v})}"
+            logger.debug(f"Try parse url: {url}")
 
-        if not result: return []
+            result = self._parse_market(url=url, rank=rank)
 
-        result = self._parse_cards_lots(cards_list=result)
+            if not result: return []
 
-        return result
+            result = self._parse_cards_lots(cards_list=result)
+
+            return result
+        except Exception as e:
+            logger.error(e)
+            raise e
 
 
-# __all__ = ["MangabuffParser", "CardRank", "CardInfo"]
+# __all__ = ["MangabuffParser", "CardRank", "CardInfo", "NotAuthorized"]

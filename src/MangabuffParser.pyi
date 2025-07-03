@@ -80,12 +80,10 @@ class MangabuffParser:
         ...     cards = parser.get_cards_lots(query='тайтл', want=True, rank=CardRank.S)
     """
 
-    _mail: str
-    _password: str
     _request_delay: float|int
     _session: Session
 
-    def __init__(self, *, mail: str, password: str, request_delay:float|int=2.0) -> None:
+    def __init__(self, *, mail: str, password: str, request_delay: float|int = 2.0) -> None:
         """Инициализатор
 
         Parameters:
@@ -122,7 +120,7 @@ class MangabuffParser:
 
     def __del__(self) -> None: ...
 
-    def _login(self) -> None:
+    def _login(self, mail: str, password: str) -> None:
         """Авторизация на mangabuff.ru
 
         Raises:

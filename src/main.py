@@ -12,10 +12,14 @@ load_dotenv()
 
 def main():
     logging.basicConfig(filename="mangabuff-card-tracker.log", level=logging.INFO)
+    logger.info("Starting mangabuff-card-tracker")
+
     mail = getenv("MANGABUFF_MAIL")
     password = getenv("MANGABUFF_PASSWORD")
     mb_parser = MangabuffParser(mail=mail, password=password)
     print(mb_parser.get_cards_lots(query='Восхождение в тени', want=True, rank=CardRank.D))
+
+    logger.info(f"Finished mangabuff-card-tracker")
 
 
 if __name__ == '__main__':
