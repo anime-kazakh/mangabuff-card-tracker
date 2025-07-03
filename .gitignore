@@ -1,0 +1,8 @@
+# dir ignore
+.venv/
+.idea/
+__pycache__/
+
+# files ignore
+.env
+.log
