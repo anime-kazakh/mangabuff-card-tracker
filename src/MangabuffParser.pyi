@@ -123,6 +123,10 @@ class MangabuffParser:
     def _login(self, mail: str, password: str) -> None:
         """Авторизация на mangabuff.ru
 
+        Parameters:
+            mail (str): Электронная почта для авторизации
+            password (str): Пароль от аккаунта
+
         Raises:
             ValueError: Не найден CSRF токен либо ошибка в обработке ответа
             NotAuthorized: Не авторован
