@@ -66,6 +66,8 @@ class CardInfo:
 
     def __str__(self) -> str: ...
 
+    def __hash__(self) -> int: ...
+
 
 class NotAuthorized(Exception):
     """Вызывается когда не авторизован"""

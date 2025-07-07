@@ -54,6 +54,9 @@ class CardInfo:
     def __str__(self):
         return f"{self.name}: {self.rank} - лоты: {self.lots}"
 
+    def __hash__(self):
+        return hash(self.data_id)
+
 
 class NotAuthorized(Exception):
     pass
@@ -171,7 +174,7 @@ class MangabuffParser:
 
     def _parse_market(self, *, url, rank):
         logger.info("Parsing market page")
-        result = list()
+        result = set()
 
         for current_rank in rank:
             for page in range(1, MARKET_MAX_PAGES + 1):
@@ -193,12 +196,12 @@ class MangabuffParser:
                 for wrapper in cards_wrappers:
                     data_id = wrapper.get("data-id")
                     if not data_id and not isinstance(data_id, str): continue
-                    result.append(CardInfo(
+                    result.add(CardInfo(
                         data_id=data_id,
                         rank=current_rank
                     ))
 
-        return result
+        return list(result)
 
     def get_cards_lots(self, *, query=None, want=False, rank=None):
         logger.info(f"get_cards_lots called with query: {query}, want: {want}, rank: {rank}")
