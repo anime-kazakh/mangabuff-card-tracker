@@ -15,13 +15,10 @@ class TestInitLoginMangabuffParser(TestCase):
         self.mock_session.headers = dict()
 
         self.csrf_token = "test_token"
-        self.mock_response_get = MagicMock()
-        self.mock_response_get.content = f"<html><head><meta name='csrf-token' content='{self.csrf_token}'></head></html>"
-        self.mock_session.get = MagicMock(return_value=self.mock_response_get)
 
-        self.mock_response_post = MagicMock()
-        self.mock_response_post.status_code = 200
-        self.mock_session.post = MagicMock(return_value=self.mock_response_post)
+        self.mock_session.get.return_value.content = f"<meta name='csrf-token' content='{self.csrf_token}'>"
+        self.mock_session.post.return_value.status_code = 200
+
 
     @patch.object(MangabuffParser, "_login")
     def test_init_valid_credentials(self, mock_login):
@@ -61,7 +58,7 @@ class TestInitLoginMangabuffParser(TestCase):
 
     def test_csrf_not_found(self):
         """Тест на отсутствие CSRF токена"""
-        self.mock_response_get.content = "<html><head></head></html>"
+        self.mock_session.get.return_value.content = "<html></html>"
         with patch("requests.Session", return_value=self.mock_session):
             with self.assertRaises(ValueError):
                 MangabuffParser(mail=VALID_EMAIL, password=VALID_PASSWORD)
@@ -83,28 +80,70 @@ class TestInitLoginMangabuffParser(TestCase):
 
     def test_login_fail(self):
         """Тест провальной авторизации"""
-        self.mock_response_post.status_code = AUTHORIZATION_ERROR_CODE
+        self.mock_session.post.return_value.status_code = AUTHORIZATION_ERROR_CODE
         with patch("requests.Session", return_value=self.mock_session):
             with self.assertRaises(NotAuthorized):
                 MangabuffParser(mail=VALID_EMAIL, password=VALID_PASSWORD)
 
 
-class TestMarketParsingMangabuffParser(TestCase):
+class TestGetCardsLots(TestCase):
     @classmethod
-    @patch("request.Session", MagicMock())
-    def setUpClass(cls, mock_session):
-        mock_session.headers = dict()
+    def setUpClass(cls):
+        cls.mock_session = MagicMock()
+        cls.mock_session.headers = dict()
+        cls.mock_session.get.return_value.content = f"<meta name='csrf-token' content='test_token'>"
+        cls.mock_session.post.return_value.status_code = 200
 
-        mock_response_get = MagicMock()
-        mock_response_get.content = f"<html><head><meta name='csrf-token' content='test_token'></head></html>"
-        mock_session.get = MagicMock(return_value=mock_response_get)
+        with patch("requests.Session", return_value=cls.mock_session):
+            cls.parser = MangabuffParser(mail=VALID_EMAIL, password=VALID_PASSWORD)
 
-        mock_response_post = MagicMock()
-        mock_response_post.status_code = 200
-        mock_session.post = MagicMock(return_value=mock_response_post)
+    @parameterized.expand([
+        (1, True, CardRank.X, TypeError),
+        ("test query", dict(), CardRank.X, TypeError),
+        ("test query", True, set(), TypeError),
+        (None, False, CardRank.X, ValueError),
+        ("", False, CardRank.X, ValueError),
+        ("  ", False, CardRank.X, ValueError),
+    ])
+    @patch.object(MangabuffParser, "_parse_market")
+    @patch.object(MangabuffParser, "_parse_cards_lots")
+    def test_get_cards_lots_except(self, query, want, rank, exc_raise, mock_parse_cards_lots, mock_parse_market):
+        with self.assertRaises(exc_raise):
+            self.parser.get_cards_lots(query=query, want=want, rank=rank)
+        mock_parse_market.assert_not_called()
+        mock_parse_cards_lots.assert_not_called()
 
-        cls.parser = MangabuffParser(mail=VALID_EMAIL, password=VALID_PASSWORD)
+    @parameterized.expand([
+        ("test query", True, CardRank.X, f"{MANGABUFF_URL}/market?q=test+query&want=1"),
+        (None, True, None, f"{MANGABUFF_URL}/market?want=1"),
+        ("  ", True, None, f"{MANGABUFF_URL}/market?want=1"),
+        ("test query", False, None, f"{MANGABUFF_URL}/market?q=test+query")
+    ])
+    @patch.object(MangabuffParser, "_parse_market")
+    @patch.object(MangabuffParser, "_parse_cards_lots")
+    def test_get_cards_lots_url_build(self, query, want, rank, out_url, mock_parse_cards_lots, mock_parse_market):
+        mock_parse_market.return_value = list()
+        self.parser.get_cards_lots(query=query, want=want, rank=rank)
+        mock_parse_market.assert_called_once_with(url=out_url, rank=[rank,] if rank else list(CardRank))
+        mock_parse_cards_lots.assert_not_called()
 
+    @patch.object(MangabuffParser, "_parse_market")
+    @patch.object(MangabuffParser, "_parse_cards_lots")
+    def test_parse_market_return_empty(self, mock_parse_cards_lots, mock_parse_market):
+        mock_parse_market.return_value = [ ]
+        self.assertEqual(self.parser.get_cards_lots(want=True), list())
+        mock_parse_market.assert_called_once()
+        mock_parse_cards_lots.assert_not_called()
+
+
+class TestParseMarket(TestGetCardsLots):
+    def setUp(self):
+        lst = [
+            MagicMock(content="<html></html>"),
+            MagicMock(content="<html></html>"),
+            MagicMock(content="<html></html>")
+        ]
+        self.mock_session.get = MagicMock(side_effect=lst)
 
 if __name__ == '__main__':
     main()
