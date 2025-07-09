@@ -57,6 +57,9 @@ class CardInfo:
     def __hash__(self):
         return hash(self.data_id)
 
+    def __eq__(self, other):
+        return self.data_id == other.data_id
+
 
 class NotAuthorized(Exception):
     pass
@@ -195,9 +198,9 @@ class MangabuffParser:
 
                 for wrapper in cards_wrappers:
                     data_id = wrapper.get("data-id")
-                    if not data_id and not isinstance(data_id, str): continue
+                    if not data_id: continue
                     result.add(CardInfo(
-                        data_id=data_id,
+                        data_id=str(data_id).strip(),
                         rank=current_rank
                     ))
 

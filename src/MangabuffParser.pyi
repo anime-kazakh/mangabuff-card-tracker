@@ -68,6 +68,8 @@ class CardInfo:
 
     def __hash__(self) -> int: ...
 
+    def __eq__(self, other: "CardInfo") -> bool: ...
+
 
 class NotAuthorized(Exception):
     """Вызывается когда не авторизован"""
