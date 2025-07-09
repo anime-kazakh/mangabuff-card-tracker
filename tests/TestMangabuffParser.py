@@ -1,5 +1,5 @@
 from unittest import TestCase, main
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 
 from parameterized import parameterized
 from src.MangabuffParser import MANGABUFF_URL, AUTHORIZATION_ERROR_CODE
@@ -9,6 +9,10 @@ from src.MangabuffParser import MangabuffParser, NotAuthorized, CardRank, CardIn
 VALID_EMAIL = "testmail@gmail.com"
 VALID_PASSWORD = "password123"
 
+MARKET_LIST_CARDS_SELECTOR = "market-list__cards market-list__cards--all manga-cards"
+MARKET_CARDS_WRAPPER_SELECTOR = "manga-cards__item-wrapper"
+
+
 class TestInitLoginMangabuffParser(TestCase):
     def setUp(self):
         self.mock_session = MagicMock()
@@ -16,7 +20,7 @@ class TestInitLoginMangabuffParser(TestCase):
 
         self.csrf_token = "test_token"
 
-        self.mock_session.get.return_value.content = f"<meta name='csrf-token' content='{self.csrf_token}'>"
+        self.mock_session.get.return_value.content = f"<meta name=\"csrf-token\" content=\"{self.csrf_token}\">"
         self.mock_session.post.return_value.status_code = 200
 
 
@@ -91,7 +95,7 @@ class TestGetCardsLots(TestCase):
     def setUpClass(cls):
         cls.mock_session = MagicMock()
         cls.mock_session.headers = dict()
-        cls.mock_session.get.return_value.content = f"<meta name='csrf-token' content='test_token'>"
+        cls.mock_session.get.return_value.content = f"<meta name=\"csrf-token\" content=\"test_token\">"
         cls.mock_session.post.return_value.status_code = 200
 
         with patch("requests.Session", return_value=cls.mock_session):
@@ -138,12 +142,58 @@ class TestGetCardsLots(TestCase):
 
 class TestParseMarket(TestGetCardsLots):
     def setUp(self):
-        lst = [
-            MagicMock(content="<html></html>"),
-            MagicMock(content="<html></html>"),
-            MagicMock(content="<html></html>")
-        ]
-        self.mock_session.get = MagicMock(side_effect=lst)
+        self.mock_session.get.reset_mock(return_value=True, side_effect=True)
+    
+    @parameterized.expand([
+        ("url?q=q", [CardRank.X,]),
+        ("url?q=q", list(CardRank))
+    ])
+    def test_prase_market_url_build(self, input_url, input_rank):
+        self.mock_session.get.return_value = MagicMock(content="<html></html>")
+
+        calls = list()
+        for rank in input_rank:
+            calls.append(call(f"{input_url}&rank={rank}&page=1", timeout=10))
+            calls.append(call().raise_for_status())
+
+        self.parser._parse_market(url=input_url, rank=input_rank)
+        self.mock_session.get.assert_has_calls(calls)
+
+    @parameterized.expand([
+        ([f"<div class=\"{MARKET_LIST_CARDS_SELECTOR}\">"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\" data-id=\"1\"></div>"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\" data-id=\"2\"></div>"
+          f"</div>",
+          f"<div class=\"{MARKET_LIST_CARDS_SELECTOR}\">"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\" data-id=\"3\"></div>"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\" data-id=\"3\"></div>"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\" data-id=\"4\"></div>"
+          f"<div class=\"{MARKET_CARDS_WRAPPER_SELECTOR}\"></div>"
+          f"</div>",
+          f"<div class=\"{MARKET_LIST_CARDS_SELECTOR}\">"
+          f"</div>"
+          ],
+         [CardInfo(data_id="1", rank=CardRank(CardRank.X)),
+          CardInfo(data_id="2", rank=CardRank(CardRank.X)),
+          CardInfo(data_id="3", rank=CardRank(CardRank.X)),
+          CardInfo(data_id="4", rank=CardRank(CardRank.X))
+          ]
+        ),
+        ([f"<html></html>",
+         ], []),
+    ])
+    def test_parse_market(self, mock_content, expect_result):
+        content_side_effect = list()
+        for content in mock_content:
+            content_side_effect.append(MagicMock(content=content))
+        self.mock_session.get.side_effect = content_side_effect
+        result = self.parser._parse_market(url="url?q=q", rank=[CardRank(CardRank.X),])
+
+        result = set(result)
+        expect_result = set(expect_result)
+
+        self.assertEqual(result, expect_result)
+
 
 if __name__ == '__main__':
     main()
