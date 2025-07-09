@@ -171,7 +171,9 @@ class MangabuffParser:
             for lot in lots_divs:
                 price = lot.select_one(SELECTOR_MARKET_SHOW_ITEM_PRICE)
                 if not price: continue
-                card.lots.append(price.text.strip())
+                price_text = price.text.strip()
+                if not price_text: continue
+                card.lots.append(price_text)
 
         return cards_list
 
