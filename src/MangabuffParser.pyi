@@ -49,18 +49,21 @@ class CardInfo:
         data_id (str)   : ID карты
         rank (CardRank) : Ранг карты
         name (str)      : Название карточки
+        manga_name (str): Название тайтла
         lots (list[str]): Список цен на лоты
     """
 
     data_id: str
     rank: CardRank
     name: str = ...
+    manga_name: str = ...
     lots: list[str] = ...
 
     def __init__(self,
                  data_id: str,
                  rank: CardRank,
                  name: str=...,
+                 manga_name: str=...,
                  lots: list[str]=...
                  ) -> None: ...
 
@@ -82,6 +85,9 @@ class MangabuffParser:
     Example:
         >>> with MangabuffParser(mail='user@example.com', password='pass') as parser:
         ...     cards = parser.get_cards_lots(query='тайтл', want=True, rank=CardRank.S)
+
+        >>> parser = MangabuffParser(mail='user@example.com', password='pass')
+        >>> cards = parser.get_cards_lots(want=True)
     """
 
     _request_delay: float|int
@@ -100,6 +106,8 @@ class MangabuffParser:
             TypeError: Неверные типы аргументов
             ValueError: Пустые строки в электронной почте или пароле
             EmailNotValidError: Почта не прошла валидацию
+            NotAuthorized: Не авторован
+            HTTPError: Проблемы сетевого характера, ID, CSRF не найден. Проблемы с HTML
         """
         ...
 
@@ -122,7 +130,11 @@ class MangabuffParser:
     def __del__(self) -> None: ...
 
     def _get_user_id(self) -> None:
-        """Получение id пользователя на сайте"""
+        """Получение id пользователя на сайте
+
+        Raises:
+            HTTPError: ID не найден. Проблемы с HTTP или со HTML страницей
+        """
         pass
 
     def _login(self, mail: str, password: str) -> None:
@@ -133,7 +145,7 @@ class MangabuffParser:
             password (str): Пароль от аккаунта
 
         Raises:
-            ValueError: Не найден CSRF токен либо ошибка в обработке ответа
+            HTTPError: Не найден CSRF токен либо ошибка в обработке ответа
             NotAuthorized: Не авторован
         """
         ...
@@ -141,6 +153,14 @@ class MangabuffParser:
     def _close(self) -> None:
         """Закрытие сессии"""
         ...
+
+    def _parse_wish_list(self) -> Iterable[CardInfo]:
+        """Парсинг списка желаемых карточек
+
+        :return:
+            list[CardInfo]: Список всех желаемых пользователем карточек с названиями тайтлов
+        """
+        pass
 
     def _parse_market(self, *, url: str, rank: Iterable[CardRank]) -> Iterable[CardInfo]:
         """Парсинг основной страницы торговой площадки
@@ -161,7 +181,7 @@ class MangabuffParser:
             cards_list (Iterable[CardInfo]): Список кард
 
         Returns:
-            list[CardInfo]: Входной список кард с именем карточки и лотами
+            list[CardInfo]: Входной список карт с именем карточки и лотами
         """
         ...
 
@@ -180,7 +200,7 @@ class MangabuffParser:
             rank (Optional[CardRank]): Ранг карточки
 
         Returns:
-            list[CardInfo]: ID, Ранг, Название, Лоты карточек
+            list[CardInfo]: ID, Ранг, Название, Название тайтла, Лоты карточек
 
         Examples:
             >>> parser = MangabuffParser(mail='user@example.com', password='pass')

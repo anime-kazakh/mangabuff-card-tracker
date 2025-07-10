@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 import requests
 from bs4 import BeautifulSoup
 from email_validator import validate_email, EmailNotValidError
-
+from requests import HTTPError
 
 MARKET_MAX_PAGES = 100
 
@@ -27,6 +27,8 @@ SELECTOR_MARKET_SHOW_ITEM_PRICE = "div.market-show__item-price"
 
 SCRIPT_USER_ID_TEXT = "window.user_id"
 SCRIPT_USER_ID_RE = r"window\.user_id\s*=\s*(\d*);"
+
+SELECTOR_WISH_LIST_CARDS = "div.manga-cards__item"
 
 class CardRank(Enum):
     X = "x"
@@ -53,6 +55,7 @@ class CardInfo:
     data_id: str
     rank: CardRank
     name: str = ''
+    manga_name: str = ''
     lots: list[str] = field(default_factory=list)
 
     def __str__(self):
@@ -119,6 +122,7 @@ class MangabuffParser:
     def _get_user_id(self):
         logger.info(f"try get user id on {MANGABUFF_URL}")
 
+        sleep(self._request_delay) # block safety
         main_page = self._session.get(MANGABUFF_URL, timeout=10)
         main_page.raise_for_status()
 
@@ -127,8 +131,10 @@ class MangabuffParser:
 
         if script:
             user_id = re.search(SCRIPT_USER_ID_RE, script.text)
-            if not user_id: raise ValueError("ID не найден")
+            if not user_id: raise HTTPError("ID не найден")
             self._user_id = user_id.group(1)
+            logger.info(f"found user id: {self._user_id}")
+        else: raise HTTPError("sctipt не найден")
 
     def _login(self, mail, password):
         logger.info(f"{mail} - try login")
@@ -141,7 +147,7 @@ class MangabuffParser:
 
         csrf_meta = soup.select_one(SELECTOR_META_CSRF)
         if not csrf_meta:
-            raise ValueError("CSRF Token не найден")
+            raise HTTPError("CSRF Token не найден")
         csrf_token = csrf_meta.get("content")
 
         headers = {
@@ -167,6 +173,39 @@ class MangabuffParser:
                 self._session.close()
         except Exception as close_error:
             logger.error(close_error)
+
+    def _parse_wish_list(self):
+        url = f"{MANGABUFF_URL}/cards/{self._user_id}/offers?type_w=0"
+        result = set()
+
+        for rank in list(CardRank):
+            for page in range(1, MARKET_MAX_PAGES):
+                url_req = f"{url}&type={rank}&page={page}"
+
+                sleep(self._request_delay)
+                response = self._session.get(url_req, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.content, features="html.parser")
+
+                cards_item = soup.select(SELECTOR_WISH_LIST_CARDS)
+
+                if not cards_item: break
+                for card in cards_item:
+                    _data_id = card.get("data-card-id").strip()
+                    _name = card.get("data-name").strip()
+                    _manga_name = card.get("data-manga-name").strip()
+                    if not _data_id or not _name or not _manga_name:break
+
+                    result.add(CardInfo(
+                        data_id=_data_id,
+                        rank=CardRank(rank),
+                        name=_name,
+                        manga_name=_manga_name
+                    ))
+
+        return list(result)
+
 
     def _parse_market(self, *, url, rank):
         logger.info("Parsing market page")
@@ -260,6 +299,13 @@ class MangabuffParser:
             result = self._parse_market(url=url, rank=rank)
 
             if not result: return []
+
+            if want:
+                want_cards = self._parse_wish_list()
+                result = list(filter(lambda _card: _card in result, want_cards))
+            elif query:
+                for card in result:
+                    card.manga_name = query
 
             result = self._parse_cards_lots(cards_list=result)
 
