@@ -86,6 +86,7 @@ class MangabuffParser:
 
     _request_delay: float|int
     _session: Session
+    _user_id: str
 
     def __init__(self, *, mail: str, password: str, request_delay: float|int = 2.0) -> None:
         """Инициализатор
@@ -110,10 +111,6 @@ class MangabuffParser:
         """
         ...
 
-    def _close(self) -> None:
-        """Закрытие сессии"""
-        ...
-
     def __exit__(
             self,
             exc_type: Optional[Type[BaseException]],
@@ -123,6 +120,10 @@ class MangabuffParser:
         ...
 
     def __del__(self) -> None: ...
+
+    def _get_user_id(self) -> None:
+        """Получение id пользователя на сайте"""
+        pass
 
     def _login(self, mail: str, password: str) -> None:
         """Авторизация на mangabuff.ru
@@ -137,15 +138,8 @@ class MangabuffParser:
         """
         ...
 
-    def _parse_cards_lots(self, *, cards_list: Iterable[CardInfo]) -> Iterable[CardInfo]:
-        """Парсинг страниц лотов кард
-
-        Parameters:
-            cards_list (Iterable[CardInfo]): Список кард
-
-        Returns:
-            list[CardInfo]: Входной список кард с именем карточки и лотами
-        """
+    def _close(self) -> None:
+        """Закрытие сессии"""
         ...
 
     def _parse_market(self, *, url: str, rank: Iterable[CardRank]) -> Iterable[CardInfo]:
@@ -157,6 +151,17 @@ class MangabuffParser:
 
         Returns:
             list[CardInfo]: ID карточкек, Ранг карточки
+        """
+        ...
+
+    def _parse_cards_lots(self, *, cards_list: Iterable[CardInfo]) -> Iterable[CardInfo]:
+        """Парсинг страниц лотов кард
+
+        Parameters:
+            cards_list (Iterable[CardInfo]): Список кард
+
+        Returns:
+            list[CardInfo]: Входной список кард с именем карточки и лотами
         """
         ...
 

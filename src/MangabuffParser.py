@@ -1,4 +1,5 @@
 import logging
+import re
 from time import sleep
 from enum import Enum
 from urllib.parse import urlencode
@@ -23,6 +24,9 @@ SELECTOR_MARKET_CARDS_WRAPPER = "div.manga-cards__item-wrapper"
 SELECTOR_MARKET_SHOW = "div.card-show"
 SELECTOR_MARKET_SHOW_ITEM = "div.market-show__item"
 SELECTOR_MARKET_SHOW_ITEM_PRICE = "div.market-show__item-price"
+
+SCRIPT_USER_ID_TEXT = "window.user_id"
+SCRIPT_USER_ID_RE = r"window\.user_id\s*=\s*(\d*);"
 
 class CardRank(Enum):
     X = "x"
@@ -52,7 +56,7 @@ class CardInfo:
     lots: list[str] = field(default_factory=list)
 
     def __str__(self):
-        return f"{self.name}: {self.rank} - лоты: {self.lots}"
+        return f"🃏 {self.name}: {self.rank}. лоты 👉 {' '.join(self.lots)}"
 
     def __hash__(self):
         return hash(self.data_id)
@@ -97,6 +101,7 @@ class MangabuffParser:
             self._session.headers.update(headers)
 
             self._login(mail, password)
+            self._get_user_id()
         except Exception as e:
             logger.critical(e)
             raise e
@@ -104,20 +109,26 @@ class MangabuffParser:
     def __enter__(self):
         return self
 
-    def _close(self):
-        logger.info(f"MangabuffParser session closed")
-        try:
-            if hasattr(self, "_session"):
-                self._session.close()
-        except Exception as close_error:
-            logger.error(close_error)
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._close()
         return False
 
     def __del__(self):
         self._close()
+
+    def _get_user_id(self):
+        logger.info(f"try get user id on {MANGABUFF_URL}")
+
+        main_page = self._session.get(MANGABUFF_URL, timeout=10)
+        main_page.raise_for_status()
+
+        soup = BeautifulSoup(main_page.content, "html.parser")
+        script = soup.find("script", text=re.compile(SCRIPT_USER_ID_TEXT))
+
+        if script:
+            user_id = re.search(SCRIPT_USER_ID_RE, script.text)
+            if not user_id: raise ValueError("ID не найден")
+            self._user_id = user_id.group(1)
 
     def _login(self, mail, password):
         logger.info(f"{mail} - try login")
@@ -149,33 +160,13 @@ class MangabuffParser:
         logger.info(f"{mail} - login success")
         logger.info("Session opened")
 
-    def _parse_cards_lots(self, *, cards_list):
-        logger.info("Parsing cards lots")
-        for card in cards_list:
-            url = f"{MANGABUFF_URL}/market/card/{card.data_id}"
-            logger.debug(f"url: {url}")
-
-            sleep(self._request_delay) # block safety
-            response = self._session.get(url, timeout=10)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.content, features="html.parser")
-
-            card_show = soup.select_one(SELECTOR_MARKET_SHOW)
-            if not card_show: continue
-            card.name = card_show.get("data-name")
-
-            lots_divs = soup.select(SELECTOR_MARKET_SHOW_ITEM)
-            if not lots_divs: continue
-
-            for lot in lots_divs:
-                price = lot.select_one(SELECTOR_MARKET_SHOW_ITEM_PRICE)
-                if not price: continue
-                price_text = price.text.strip()
-                if not price_text: continue
-                card.lots.append(price_text)
-
-        return cards_list
+    def _close(self):
+        logger.info(f"MangabuffParser session closed")
+        try:
+            if hasattr(self, "_session"):
+                self._session.close()
+        except Exception as close_error:
+            logger.error(close_error)
 
     def _parse_market(self, *, url, rank):
         logger.info("Parsing market page")
@@ -208,6 +199,34 @@ class MangabuffParser:
 
         return list(result)
 
+    def _parse_cards_lots(self, *, cards_list):
+        logger.info("Parsing cards lots")
+        for card in cards_list:
+            url = f"{MANGABUFF_URL}/market/card/{card.data_id}"
+            logger.debug(f"url: {url}")
+
+            sleep(self._request_delay) # block safety
+            response = self._session.get(url, timeout=10)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, features="html.parser")
+
+            card_show = soup.select_one(SELECTOR_MARKET_SHOW)
+            if not card_show: continue
+            card.name = card_show.get("data-name")
+
+            lots_divs = soup.select(SELECTOR_MARKET_SHOW_ITEM)
+            if not lots_divs: continue
+
+            for lot in lots_divs:
+                price = lot.select_one(SELECTOR_MARKET_SHOW_ITEM_PRICE)
+                if not price: continue
+                price_text = price.text.strip()
+                if not price_text: continue
+                card.lots.append(price_text)
+
+        return cards_list
+
     def get_cards_lots(self, *, query=None, want=False, rank=None):
         logger.info(f"get_cards_lots called with query: {query}, want: {want}, rank: {rank}")
 
@@ -216,7 +235,7 @@ class MangabuffParser:
                 if not isinstance(query, str):
                     raise TypeError("Запрос должен быть строкой")
 
-                query = query.strip()
+                query = query.strip().lower()
 
             if not isinstance(want, bool):
                 raise TypeError("Флаг want должен быть только True или False")
