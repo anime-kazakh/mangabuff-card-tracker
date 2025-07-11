@@ -75,7 +75,7 @@ class CardInfo:
         for card in cards_list:
             if card.manga_name != title:
                 title = card.manga_name
-                result += f"{title}\n"
+                result += f"🥭**{title}**\n"
             result += f"\t{card}\n"
         return result
 
