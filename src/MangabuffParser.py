@@ -174,39 +174,6 @@ class MangabuffParser:
         except Exception as close_error:
             logger.error(close_error)
 
-    def _parse_wish_list(self):
-        url = f"{MANGABUFF_URL}/cards/{self._user_id}/offers?type_w=0"
-        result = set()
-
-        for rank in list(CardRank):
-            for page in range(1, MARKET_MAX_PAGES):
-                url_req = f"{url}&type={rank}&page={page}"
-
-                sleep(self._request_delay)
-                response = self._session.get(url_req, timeout=10)
-                response.raise_for_status()
-
-                soup = BeautifulSoup(response.content, features="html.parser")
-
-                cards_item = soup.select(SELECTOR_WISH_LIST_CARDS)
-
-                if not cards_item: break
-                for card in cards_item:
-                    _data_id = card.get("data-card-id").strip()
-                    _name = card.get("data-name").strip()
-                    _manga_name = card.get("data-manga-name").strip()
-                    if not _data_id or not _name or not _manga_name:break
-
-                    result.add(CardInfo(
-                        data_id=_data_id,
-                        rank=CardRank(rank),
-                        name=_name,
-                        manga_name=_manga_name
-                    ))
-
-        return list(result)
-
-
     def _parse_market(self, *, url, rank):
         logger.info("Parsing market page")
         result = set()
@@ -234,6 +201,38 @@ class MangabuffParser:
                     result.add(CardInfo(
                         data_id=str(data_id).strip(),
                         rank=current_rank
+                    ))
+
+        return list(result)
+
+    def _parse_wish_list(self):
+        url = f"{MANGABUFF_URL}/cards/{self._user_id}/offers?type_w=0"
+        result = set()
+
+        for rank in list(CardRank):
+            for page in range(1, MARKET_MAX_PAGES):
+                url_req = f"{url}&type={rank}&page={page}"
+
+                sleep(self._request_delay)
+                response = self._session.get(url_req, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.content, features="html.parser")
+
+                cards_item = soup.select(SELECTOR_WISH_LIST_CARDS)
+
+                if not cards_item: break
+                for card in cards_item:
+                    _data_id = card.get("data-card-id").strip()
+                    _name = card.get("data-name").strip()
+                    _manga_name = card.get("data-manga-name").strip()
+                    if not _data_id or not _name or not _manga_name:continue
+
+                    result.add(CardInfo(
+                        data_id=_data_id,
+                        rank=CardRank(rank),
+                        name=_name,
+                        manga_name=_manga_name
                     ))
 
         return list(result)
