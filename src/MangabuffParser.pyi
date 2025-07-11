@@ -20,6 +20,11 @@ SELECTOR_MARKET_SHOW: str
 SELECTOR_MARKET_SHOW_ITEM: str
 SELECTOR_MARKET_SHOW_ITEM_PRICE: str
 
+SCRIPT_USER_ID_TEXT: str = ...
+SCRIPT_USER_ID_RE: str = ...
+
+SELECTOR_WISH_LIST_CARDS: str = ...
+
 class CardRank(Enum):
     """Перечисления рангов карточек"""
 
@@ -154,14 +159,6 @@ class MangabuffParser:
         """Закрытие сессии"""
         ...
 
-    def _parse_wish_list(self) -> Iterable[CardInfo]:
-        """Парсинг списка желаемых карточек
-
-        :return:
-            list[CardInfo]: Список всех желаемых пользователем карточек с названиями тайтлов
-        """
-        pass
-
     def _parse_market(self, *, url: str, rank: Iterable[CardRank]) -> Iterable[CardInfo]:
         """Парсинг основной страницы торговой площадки
 
@@ -171,6 +168,14 @@ class MangabuffParser:
 
         Returns:
             list[CardInfo]: ID карточкек, Ранг карточки
+        """
+        ...
+
+    def _parse_wish_list(self) -> Iterable[CardInfo]:
+        """Парсинг списка желаемых карточек
+
+        :return:
+            list[CardInfo]: Список всех желаемых пользователем карточек с названиями тайтлов
         """
         ...
 
