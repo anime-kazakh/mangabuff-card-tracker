@@ -67,6 +67,18 @@ class CardInfo:
     def __eq__(self, other):
         return self.data_id == other.data_id
 
+    @staticmethod
+    def out_list(cards_list):
+        cards_list.sort(key=lambda x: x.manga_name)
+        title = str()
+        result = str()
+        for card in cards_list:
+            if card.manga_name != title:
+                title = card.manga_name
+                result += f"{title}\n"
+            result += f"\t{card}\n"
+        return result
+
 
 class NotAuthorized(Exception):
     pass

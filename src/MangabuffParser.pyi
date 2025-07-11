@@ -78,6 +78,14 @@ class CardInfo:
 
     def __eq__(self, other: "CardInfo") -> bool: ...
 
+    @staticmethod
+    def out_list(cards_list: list[CardInfo]) -> str:
+        """Вывод списка карт в стрку, в md формате
+        Parameters:
+            cards_list (list[CardInfo]): Список карт
+        """
+        ...
+
 
 class NotAuthorized(Exception):
     """Вызывается когда не авторизован"""
