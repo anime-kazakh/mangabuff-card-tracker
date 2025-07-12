@@ -218,6 +218,7 @@ class MangabuffParser:
         return list(result)
 
     def _parse_wish_list(self):
+        logger.info(f"Parsing users {self._user_id} wish list")
         url = f"{MANGABUFF_URL}/cards/{self._user_id}/offers?type_w=0"
         result = set()
 
@@ -225,6 +226,7 @@ class MangabuffParser:
             for page in range(1, MARKET_MAX_PAGES):
                 url_req = f"{url}&type={rank}&page={page}"
 
+                logger.debug(f"Parsing {url_req}")
                 sleep(self._request_delay)
                 response = self._session.get(url_req, timeout=10)
                 response.raise_for_status()
