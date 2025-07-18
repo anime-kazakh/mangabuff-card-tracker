@@ -1,6 +1,7 @@
 from unittest import TestCase ,main
 
 from src.MangabuffParser import CardInfo, CardRank
+from resources.messages import MANGA_NAME_OUTPUT_STRING, CARD_OUTPUT_STRING
 
 
 class TestCardInfo(TestCase):
@@ -49,12 +50,12 @@ class TestCardInfo(TestCase):
                 lots=["1A", "2A"]
             ),
         ]
-        expect_result = "🥭**first manga**\n"
+        expect_result = MANGA_NAME_OUTPUT_STRING.format(title="first manga") + "\n"
         for card in filter(lambda x: x.manga_name == "first manga", input_data):
-            expect_result += f"\t{card}\n"
-        expect_result += "🥭**second manga**\n"
+            expect_result += f"{card}\n"
+        expect_result += MANGA_NAME_OUTPUT_STRING.format(title="second manga") + "\n"
         for card in filter(lambda x: x.manga_name == "second manga", input_data):
-            expect_result += f"\t{card}\n"
+            expect_result += f"{card}\n"
 
         self.assertEqual(expect_result, CardInfo.out_list(input_data))
 

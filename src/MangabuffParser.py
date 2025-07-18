@@ -10,6 +10,9 @@ from bs4 import BeautifulSoup
 from email_validator import validate_email, EmailNotValidError
 from requests import HTTPError
 
+from resources.messages import MANGA_NAME_OUTPUT_STRING, CARD_OUTPUT_STRING
+
+
 MARKET_MAX_PAGES = 100
 
 AUTHORIZATION_ERROR_CODE = 422
@@ -44,7 +47,7 @@ class CardRank(Enum):
     N = "n"
     V = "v"
     L = "l"
-    Q = 'q'
+    Q = "q"
 
     def __str__(self):
         return self.value
@@ -54,12 +57,16 @@ class CardRank(Enum):
 class CardInfo:
     data_id: str
     rank: CardRank
-    name: str = ''
-    manga_name: str = ''
+    name: str = ""
+    manga_name: str = ""
     lots: list[str] = field(default_factory=list)
 
     def __str__(self):
-        return f"🃏 {self.name}: {self.rank}. лоты 👉 {' '.join(self.lots)}"
+        return CARD_OUTPUT_STRING.format(
+            name=self.name,
+            rank=self.rank.value.capitalize(),
+            lots="|".join(self.lots)
+        )
 
     def __hash__(self):
         return hash(self.data_id)
@@ -75,8 +82,8 @@ class CardInfo:
         for card in cards_list:
             if card.manga_name != title:
                 title = card.manga_name
-                result += f"🥭**{title}**\n"
-            result += f"\t{card}\n"
+                result += MANGA_NAME_OUTPUT_STRING.format(title=title) + "\n"
+            result += f"{card}\n"
         return result
 
 
