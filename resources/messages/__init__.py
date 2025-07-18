@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import json
 
 
@@ -8,12 +8,9 @@ MANGA_NAME_OUTPUT_STRING: str
 CARD_OUTPUT_STRING: str
 
 def message_init():
-    current_dir = os.path.dirname(__file__)
-    bot_message_file = "bot_commands_messages.json"
-    cards_output_file = "cards_output.json"
-
-    bot_message_file = os.path.join(current_dir, bot_message_file)
-    cards_output_file = os.path.join(current_dir, cards_output_file)
+    current_dir = Path(__file__).parent.resolve()
+    bot_message_file = current_dir / "bot_commands_messages.json"
+    cards_output_file = current_dir / "cards_output.json"
 
     global START_MESSAGE
 

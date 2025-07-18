@@ -1,3 +1,4 @@
+from pathlib import Path
 from os import getenv
 import logging
 
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(START_MESSAGE)
 
@@ -25,7 +28,8 @@ async def card(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_markdown(CardInfo.out_list(cards_list))
 
 def main():
-    logging.basicConfig(filename="../logs/mangabuff-card-tracker.log", level=logging.INFO, encoding="utf-8")
+    log_file_path = PROJECT_ROOT / "logs" / "mangabuff-card-tracker.log"
+    logging.basicConfig(filename=log_file_path, level=logging.INFO, encoding="utf-8")
     logger.info("Starting mangabuff-card-tracker")
 
     app = ApplicationBuilder().token(getenv("BOT_TOKEN")).build()
