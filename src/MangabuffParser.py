@@ -334,5 +334,8 @@ class MangabuffParser:
             logger.error(e)
             raise e
 
+    def get_want_market_formatted(self):
+        return CardInfo.out_list(list(self.get_cards_lots(want=True)))
+
 
 # __all__ = ["MangabuffParser", "CardRank", "CardInfo", "NotAuthorized"]

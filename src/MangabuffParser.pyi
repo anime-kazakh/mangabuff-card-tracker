@@ -220,3 +220,12 @@ class MangabuffParser:
             >>> parser.get_cards_lots(query='Тайтл', want=True, rank=CardRank.C)
         """
         ...
+
+    def get_want_market_formatted(self) -> str:
+        """Выводит информацию о карточках которые находятся в wish листе и
+        выставляются на торговой площадке
+
+        :return:
+            str: Информация о карточках в MarkDown форматировании
+        """
+        ...
