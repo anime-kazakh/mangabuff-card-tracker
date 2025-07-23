@@ -30,7 +30,10 @@ def main():
         token=getenv("BOT_TOKEN"),
         chat_id=getenv("CHAT_ID"),
         parser=parser,
-        timestamps=[time(0,45,0)]
+        timestamps=[
+            time(11,0,0),
+            time(15, 0, 0)
+        ]
     )
 
     tracker.run()
