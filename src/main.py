@@ -8,17 +8,18 @@ from dotenv import load_dotenv
 from TrackerBot import TrackerBot
 from MangabuffParser import MangabuffParser
 
+
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
-
+LOG_FORMAT = "%(asctime)s:%(levelname)s:%(name)s - %(message)s"
 
 def main():
     log_file_path = PROJECT_ROOT / "logs" / "mangabuff-card-tracker.log"
-    logging.basicConfig(filename=log_file_path, level=logging.INFO, encoding="utf-8")
+    logging.basicConfig(filename=log_file_path, format=LOG_FORMAT, level=logging.INFO, encoding="utf-8")
     logger.info("Starting mangabuff-card-tracker")
 
     parser = MangabuffParser(

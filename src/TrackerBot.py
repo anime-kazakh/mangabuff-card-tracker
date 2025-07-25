@@ -1,4 +1,5 @@
 from datetime import time
+import logging
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, Application, CallbackContext, CommandHandler
@@ -6,6 +7,8 @@ from telegram.ext import ApplicationBuilder, Application, CallbackContext, Comma
 from resources.messages import *
 from MangabuffParser import MangabuffParser
 
+
+logger = logging.getLogger(__name__)
 
 class TrackerBot:
     """Класс для инициации Telegram бота"""
@@ -28,12 +31,15 @@ class TrackerBot:
 
         self._app.add_handler(CommandHandler("start", self._start))
 
+        logger.info("Bot created")
+
     def _message(self):
         """Функция замыкание для отправки сообщения
         :return:
         Асинхронная функция для планировщика задач
         """
         async def callback(context: CallbackContext):
+            logger.info("Started parsing for message")
             try:
                 await context.bot.send_message(
                     chat_id=self._chat_id,
@@ -41,7 +47,8 @@ class TrackerBot:
                     parse_mode="Markdown"
                 )
             except Exception as e:
-                print(e)
+                logger.error(e)
+            logger.info("Finished parsing for message")
         return callback
 
     def _post_init_bot(self):
@@ -64,8 +71,11 @@ class TrackerBot:
     @staticmethod
     async def _start(update: Update, _):
         """Обработчик команды /start"""
+        user = update.effective_user
+        logger.debug(f"Received start command: {user.first_name}, id: {user.id}")
         await update.message.reply_text(START_MESSAGE)
 
     def run(self):
         """Функция run_polling"""
+        logger.info("Bot running...")
         self._app.run_polling()
