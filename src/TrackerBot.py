@@ -8,7 +8,15 @@ from MangabuffParser import MangabuffParser
 
 
 class TrackerBot:
-    def __init__(self, *, token: str, chat_id: str, parser: MangabuffParser, timestamps: list[time]):
+    """Класс для инициации Telegram бота"""
+    def __init__(
+            self,
+            *,
+            token: str,
+            chat_id: str,
+            parser: MangabuffParser,
+            timestamps: list[time]
+    ):
         self._chat_id = chat_id
         self._parser = parser
         self._timestamps = timestamps
@@ -21,6 +29,10 @@ class TrackerBot:
         self._app.add_handler(CommandHandler("start", self._start))
 
     def _message(self):
+        """Функция замыкание для отправки сообщения
+        :return:
+        Асинхронная функция для планировщика задач
+        """
         async def callback(context: CallbackContext):
             try:
                 await context.bot.send_message(
@@ -33,6 +45,10 @@ class TrackerBot:
         return callback
 
     def _post_init_bot(self):
+        """post_init функция для Telegram бота
+        :return:
+        Асинхронная функция для настройки планировщика
+        """
         async def callback(application: Application):
             job_queue = application.job_queue
 
@@ -47,7 +63,9 @@ class TrackerBot:
 
     @staticmethod
     async def _start(update: Update, _):
+        """Обработчик команды /start"""
         await update.message.reply_text(START_MESSAGE)
 
     def run(self):
+        """Функция run_polling"""
         self._app.run_polling()
