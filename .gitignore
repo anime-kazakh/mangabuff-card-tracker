@@ -1,6 +1,8 @@
 # dir ignore
 .venv/
+venv/
 .idea/
+.vscode/
 __pycache__/
 logs/
 

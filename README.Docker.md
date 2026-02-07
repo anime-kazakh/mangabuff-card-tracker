@@ -38,12 +38,6 @@
 
 Теперь когда у нас все необходимые данные мы скачиваем Docker образ.
 
-``` Bash
-docker pull 
-```
-
-> [Как установить Docker](https://selectel.ru/blog/tutorials/docker-desktop-windows/).
-
 Создаём `.env` файл с таким форматированием.
 
 ``` .env

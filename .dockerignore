@@ -1,0 +1,13 @@
+**/__pycache__
+**/.venv
+**/.env
+**/logs
+**/.git
+**/.gitignore
+**/.vscode
+**/.idea
+**/docker-compose*
+**/compose.y*ml
+**/Dockerfile*
+LICENSE
+README.md
