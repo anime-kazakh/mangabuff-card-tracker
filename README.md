@@ -39,7 +39,7 @@
 Теперь когда у нас все необходимые данные мы скачиваем Docker образ.
 
 ``` Bash
-docker pull 
+docker pull armandav/mangabuff-card-tracker:latest
 ```
 
 > [Как установить Docker](https://selectel.ru/blog/tutorials/docker-desktop-windows/).
